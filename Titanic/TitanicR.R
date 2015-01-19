@@ -16,11 +16,11 @@ library(RColorBrewer)
 setwd("~/code/kaggle challenges/Titanic")   #set working directory
 
 #read in training data set
-train <- read.csv("~/code/kaggle challenges/Titanic/train.csv")
+train <- read.csv('~/code/Kaggle-Challenges/Titanic/train.csv')
 View(train)
 
 #read in test data set
-test <- read.csv("~/code/kaggle challenges/Titanic/test.csv")
+test <- read.csv("~/code/Kaggle-Challenges/Titanic/test.csv")
 View(test)
 
 fit <- rpart(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked, data = train, method = 'class')

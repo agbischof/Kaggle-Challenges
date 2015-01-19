@@ -1,0 +1,83 @@
+---
+title: "Titanic_pred"
+author: "Ashley Bischof"
+date: "January 18, 2015"
+output: html_document
+---
+
+Titanic Kaggle:
+
+Load Libraries
+```{r}
+library(ggplot2)
+```
+
+
+
+Load Data
+```{r}
+titanic_train = read.csv('~/code/Kaggle-Challenges/Titanic/train.csv')
+titanic_test = read.csv('~/code/Kaggle-Challenges/Titanic/test.csv')
+
+str(titanic_train) 
+#PassengerId, Survived, Pclass, Name, Sex, Age, SibSp, Parch, Ticket, Fare, Cabin, Embarked
+str(titanic_test)
+
+table(titanic_train$Survived, useNA = "ifany")
+```
+
+Clean and Visualize data
+```{r}
+#remove data which is individual to each passanger: PassengerId, Ticket, names for now although this may be used to create relationships
+train_clean = titanic_train[,!(names(titanic_train) %in% c("PassengerId", "Name", "Ticket"))]
+train_clean$Age = factor(ifelse(train_clean$Age < 18, 'child', 'adult'))
+str(train_clean)
+
+
+rand_ids = order(runif(891))
+train = train_clean[rand_ids[1:691],]
+test = train_clean[rand_ids[692:891],]
+
+
+pairs(train, gap = 0, cex.labels = 0.9)
+
+ggplot(aes(x = Sex, y = Survived), data = train_clean) + geom_jitter(alpha= 1, size = 1) + theme_minimal()
+#there is a striking affect of sex (females survive more than males)
+ggplot(aes(x = Age, y = Sex, colour = Survived), data = train_clean) + geom_jitter(alpha= 1, size = 1)
+#the effect of age isn't terribly obvious, maybe try splitting into groups
+ggplot(aes(x = Age), data= train_clean) + geom_histogram()
+#split 0-18, 18-40, 40+ ?
+
+ggplot(aes(x = Pclass, y = Survived), data = train_clean) + geom_jitter(alpha= 1, size = 1)
+#3rd class passangers survived less
+
+ggplot(aes(x = SibSp, y = Survived), data = train_clean) + geom_jitter(alpha= 1, size = 1)
+#no clear trend, maybe with family tree intact
+
+ggplot(aes(x = Parch, y = Survived), data = train_clean) + geom_jitter(alpha= 1, size = 1)
+#no clear trend, maybe with family tree intact or conditioning on age
+
+ggplot(aes(x = Fare, y = Survived), data = train_clean) + geom_jitter(alpha= 1, size = 1)
+#people with cheap fares didn't surviv but this could also be realted to Pclass?
+
+ggplot(aes(x = Cabin, y = Survived), data = train_clean) + geom_jitter(alpha= 1, size = 1)
+#no obvious affect, but may need more info
+
+ggplot(aes(x = Embarked, y = Survived), data = train_clean) + geom_jitter(alpha= 1, size = 1)
+#no clear trend
+
+
+ggplot(aes(x = Sex, y = Survived), data = train_clean) + geom_jitter(alpha= 1, size = 1) + theme_minimal()
+```
+
+Run logistic regression
+```{r}
+titanic_1 = glm(data = train_clean, Survived ~ Sex + Age + Pclass, family = binomial("logit"))
+
+summary(titanic_1)
+
+predict(titanic_1, test)
+```
+
+
+
