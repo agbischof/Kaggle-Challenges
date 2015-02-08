@@ -13,10 +13,11 @@ library(rpart.plot)
 library(RColorBrewer)
 
 
-setwd("~/code/kaggle challenges/Titanic")   #set working directory
+setwd("~/code/Kaggle-Challenges/Titanic")   #set working directory
 
 #read in training data set
 train <- read.csv('~/code/Kaggle-Challenges/Titanic/train.csv')
+train$Pclass <- factor(train$Pclass)
 View(train)
 
 #read in test data set
@@ -27,3 +28,43 @@ fit <- rpart(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked, da
 
 plot(fit)
 text(fit)
+
+
+
+
+
+
+#fit logistic regression
+inv.logit <- function(x){1/(1+exp(-x))}
+new.data <- data.frame(Survived=1, Pclass=c(1,2,3))
+formula.class <- as.formula(Survived ~ Pclass)
+X <- model.matrix(formula.class, data=new.data)
+
+fit <- glm(formula.class, data=train, family=binomial(link = "logit"))
+lp.classy <- as.vector(X %*% class.coef)
+lp <- predict(fit, new.data, se.fit = TRUE)
+coef1 <- coef(fit1)
+
+fit2 <- glm(Survived ~ Pclass + Sex, 
+             data = train, family = binomial(link = "logit"))
+new.data2 <- data.frame(expand.grid(Survived=1, Pclass=c(1,2,3), Sex=c('male', 'female')))
+lp2 <- predict(fit2, new.data2, type="response")
+summary(fit2)
+cbind(new.data2, lp2)
+coef2 <- coef(fit2)
+
+
+fit3 <- glm(Survived ~ Pclass + Sex + Pclass:Sex, 
+            data = train, family = binomial(link = "logit"))
+new.data3 <- data.frame(expand.grid(Survived=1, Pclass=factor(c(1,2,3)), Sex=c('male', 'female')))
+lp3 <- predict(fit3, new.data3) #, type="response")
+summary(fit3)
+cbind(new.data3, round(lp3,4))
+coef3 <- coef(fit3)
+
+
+
+fit.all <- glm(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked, data = train, family=binomial(link = "logit"))
+summary(fit_2)
+
+plot(fit)
