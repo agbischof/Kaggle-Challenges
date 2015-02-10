@@ -10,6 +10,8 @@ Titanic Kaggle:
 Load Libraries
 ```{r}
 library(ggplot2)
+library(caret)
+library(gtools)
 ```
 
 
@@ -18,6 +20,9 @@ Load Data
 ```{r}
 titanic_train = read.csv('~/code/Kaggle-Challenges/Titanic/train.csv')
 titanic_test = read.csv('~/code/Kaggle-Challenges/Titanic/test.csv')
+
+titanic_train$Pclass = factor(titanic_train$Pclass)
+titanic_test$Pclass = factor(titanic_test$Pclass)
 
 str(titanic_train) 
 #PassengerId, Survived, Pclass, Name, Sex, Age, SibSp, Parch, Ticket, Fare, Cabin, Embarked
@@ -35,8 +40,8 @@ str(train_clean)
 
 
 rand_ids = order(runif(891))
-train = train_clean[rand_ids[1:691],]
-test = train_clean[rand_ids[692:891],]
+train = titanic_train[rand_ids[1:691],]
+test = titanic_train[rand_ids[692:891],]
 
 
 pairs(train, gap = 0, cex.labels = 0.9)
@@ -45,7 +50,7 @@ ggplot(aes(x = Sex, y = Survived), data = train_clean) + geom_jitter(alpha= 1, s
 #there is a striking affect of sex (females survive more than males)
 ggplot(aes(x = Age, y = Sex, colour = Survived), data = train_clean) + geom_jitter(alpha= 1, size = 1)
 #the effect of age isn't terribly obvious, maybe try splitting into groups
-ggplot(aes(x = Age), data= train_clean) + geom_histogram()
+ggplot(aes(x = Age), data= titanic_train) + geom_histogram()
 #split 0-18, 18-40, 40+ ?
 
 ggplot(aes(x = Pclass, y = Survived), data = train_clean) + geom_jitter(alpha= 1, size = 1)
@@ -72,12 +77,73 @@ ggplot(aes(x = Sex, y = Survived), data = train_clean) + geom_jitter(alpha= 1, s
 
 Run logistic regression
 ```{r}
-titanic_1 = glm(data = train_clean, Survived ~ Sex + Age + Pclass, family = binomial("logit"))
+#fit logistic regression
+inv.logit <- function(x){1/(1+exp(-x))}
+new.data <- data.frame(Survived=1, Pclass=c(1,2,3))
+formula.class <- as.formula(Survived ~ Pclass)
+X <- model.matrix(formula.class, data=new.data)
 
-summary(titanic_1)
+fit1 <- glm(formula.class, data=train, family=binomial(link = "logit"))
+#lp.classy <- as.vector(X %*% class.coef)
+lp <- predict(fit, new.data, se.fit = TRUE)
+coef1 <- coef(fit1)
+summary(fit1)
 
-predict(titanic_1, test)
+fit2 <- glm(Survived ~ Pclass + Sex, 
+             data = train, family = binomial(link = "logit"))
+new.data2 <- data.frame(expand.grid(Survived=1, Pclass=factor(c(1,2,3)), Sex=c('male', 'female')))
+lp2 <- predict(fit2, new.data2, type="response")
+summary(fit2)
+cbind(new.data2, lp2)
+coef2 <- coef(fit2)
+
+
+fit3 <- glm(Survived ~ Pclass + Sex + Pclass:Sex, 
+            data = train, family = binomial(link = "logit"))
+new.data3 <- data.frame(expand.grid(Survived=1, Pclass=factor(c(1,2,3)), Sex=c('male', 'female')))
+lp3 <- predict(fit3, new.data3) #, type="response")
+summary(fit3)
+cbind(new.data3, round(lp3,4))
+coef3 <- coef(fit3)
+
+pred3 = data.frame(cbind(predict(fit3, test), test$Survived))
+pred_eval3 = pred3
+pred_eval3$predicted = ifelse(pred_eval3$X1 <= 0, 0, 1)
+
+
+pred2 = data.frame(cbind(predict(fit2, test), test$Survived))
+pred_eval2 = pred2
+pred_eval2$predicted = ifelse(pred_eval2$X1 <= 0, 0, 1)
+
+
+confusionMatrix(pred_eval3$predicted, pred_eval$X2)
+confusionMatrix(pred_eval2$predicted, pred_eval$X2)
 ```
 
+
+Age
+```{r}
+#check assumptions with age
+
+age_groups = data.frame(factor(floor(train$Age/10)))
+train_age = data.frame(cbind(age_groups, train$Survived))
+colnames(train_age) = c('age_groups', 'Survived')
+
+age_means = aggregate(x = train_age, by = age_groups, mean)
+colnames(age_means) = c('age_groups', 'test', 'LogitSurvival')
+
+age_means$LogitSurvival = logit(age_means$LogitSurvival)
+
+ggplot(aes(x = age_groups, y = LogitSurvival), data = age_means) + geom_point()
+
+fit4 <- glm(Survived ~ Pclass + Sex + Pclass:Sex + Age, 
+            data = train, family = binomial(link = "logit"))
+new.data4 <- data.frame(expand.grid(Survived=1, Pclass=factor(c(1,2,3)), Sex=c('male', 'female'), Age = seq(0,60, 10)))
+lp4 <- predict(fit4, new.data4) #, type="response")
+summary(fit4)
+cbind(new.data4, round(lp4,4))
+coef3 <- coef(fit3)
+
+```
 
 
